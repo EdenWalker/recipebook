@@ -12,14 +12,13 @@ const router = express.Router();
 // Middleware to authenticate tokens
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Extract the token
+    const token = authHeader && authHeader.split(' ')[1]; 
 
-    if (!token) return res.sendStatus(401); // No token provided
-
+    if (!token) return res.sendStatus(401); 
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403); // Token invalid
-        req.user = user; // Attach user info to request
-        next(); // Proceed to the next middleware or route handler
+        if (err) return res.sendStatus(403);
+        req.user = user; 
+        next(); 
     });
 }
 
@@ -187,6 +186,7 @@ router.post('/products', async (req, res) => {
     const product = req.body;
     const collection = await getPro();
     await collection.insertOne(product);
+    
     res.status(201).send(product);
 });
 
@@ -215,13 +215,42 @@ router.delete('/products/:id', async (req, res) => {
 });
 
 // Search for products
-router.get('/products/search', async (req, res) => {
-    const query = req.query.q;
-    const collection = await getPro();
-    const products = await collection.find({ name: { $regex: query, $options: 'i' } }).toArray();
-    res.send(products);
-});
+// router.get('/products/search', async (req, res) => {
+//     const query = req.query.q;
+//     const collection = await getPro();
+//     const products = await collection.find({ name: { $regex: query, $options: 'i' } }).toArray();
+//     res.send(products);
+// });
 
+//report
+router.post('/products/:id/reports', async (req, res) => {
+  const productId = req.params.id;
+  const { user, comment, rating } = req.body;
+
+  if (!user || !comment || typeof rating !== 'number') {
+      return res.status(400).send({ message: 'Invalid report data' });
+  }
+
+  const collection = await getPro();
+  const report = {
+      review_id: new ObjectId(),
+      user,
+      comment,
+      rating,
+      date: new Date()
+  };
+
+  const result = await collection.updateOne(
+      { _id: new ObjectId(productId) },
+      { $push: { report: report } }
+  );
+
+  if (result.modifiedCount === 0) {
+      return res.status(404).send({ message: 'Product not found' });
+  }
+
+  res.status(201).send(report);
+});
 // User Routes
 
 // User signup
